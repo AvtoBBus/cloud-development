@@ -1,0 +1,24 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+	  <Nullable>enable</Nullable>
+	  <IsAspireHost>true</IsAspireHost>
+	  <Configurations>Debug;Release;123</Configurations>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting" Version="8.2.2" />
+    <PackageReference Include="Aspire.Hosting.AppHost" Version="8.2.2" />
+    <PackageReference Include="Aspire.Hosting.Redis" Version="8.2.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AspireApp1\AspireApp1.ServiceDefaults\CompanyEmployees.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\Client.Wasm\Client.Wasm.csproj" />
+    <ProjectReference Include="..\CompanyEmployees.Generator\CompanyEmployees.Generator.csproj" />
+  </ItemGroup>
+
+</Project>
