@@ -16,9 +16,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\AspireApp1\AspireApp1.ServiceDefaults\CompanyEmployees.ServiceDefaults.csproj" />
     <ProjectReference Include="..\Client.Wasm\Client.Wasm.csproj" />
     <ProjectReference Include="..\CompanyEmployees.Generator\CompanyEmployees.Generator.csproj" />
+    <ProjectReference Include="..\CompanyEmployees.ServiceDefaults\CompanyEmployees.ServiceDefaults.csproj" />
   </ItemGroup>
 
 </Project>
