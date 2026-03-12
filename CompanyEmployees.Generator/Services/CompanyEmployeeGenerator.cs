@@ -23,6 +23,18 @@ public class CompanyEmployeeGenerator(ILogger<CompanyEmployeeGenerator> logger)
         "System Architect"
     ];
 
+    private readonly Faker<CompanyEmployeeModel> _faker = new("ru");
+
+    /// <summary>
+    /// Минимальное значение оклада
+    /// </summary>
+    private static readonly decimal _salaryMin = 100;
+
+    /// <summary>
+    /// Максимальное значение оклада
+    /// </summary>
+    private static readonly decimal _salaryMax = 200;
+
     /// <summary>
     /// Справочник суффиксов для профессий
     /// </summary>
@@ -45,8 +57,6 @@ public class CompanyEmployeeGenerator(ILogger<CompanyEmployeeGenerator> logger)
         [PositionSuffix.TeamLead] = 2.6m
     };
 
-    private readonly ILogger<CompanyEmployeeGenerator> _logger = logger;
-
     /// <summary>
     /// Функция для генерации сотрудника на основе параметра id
     /// </summary>
@@ -54,30 +64,32 @@ public class CompanyEmployeeGenerator(ILogger<CompanyEmployeeGenerator> logger)
     /// <returns>Сгенерированные данные о сотруднике</returns>
     public CompanyEmployeeModel Generate(int id)
     {
-        _logger.LogInformation("Start generating company employee application with ID: {Id}", id);
+        logger.LogInformation("Start generating company employee application with ID: {Id}", id);
 
-        var faker = new Faker<CompanyEmployeeModel>("ru")
-            .UseSeed(id)
+        _faker.UseSeed(id)
             .RuleFor(x => x.Id, _ => id)
-            .RuleFor(x => x.FullName, f => GenerateEmployeeFullName(f))
-            .RuleFor(x => x.Position, f => GenerateEmployeePosition(f))
+            .RuleFor(x => x.FullName, GenerateEmployeeFullName)
+            .RuleFor(x => x.Position, f => $"{f.PickRandom(_positionProfessions)} {f.PickRandom<PositionSuffix>()}")
             .RuleFor(x => x.Section, f => f.Commerce.Department())
             .RuleFor(x => x.AdmissionDate, f => f.Date.PastDateOnly(10))
-            .RuleFor(x => x.Salary, (f, x) => GenerateEmployeeSalary(f, x))
+            .RuleFor(x => x.Salary, GenerateEmployeeSalary)
             .RuleFor(x => x.Email, f => f.Internet.Email())
             .RuleFor(x => x.PhoneNumber, f => f.Phone.PhoneNumber("+7(###)###-##-##"))
             .RuleFor(x => x.Dismissal, f => f.Random.Bool())
-            .RuleFor(x => x.DismissalDate, (f, x) => GenerateEmployeeDismissalDate(f, x));
+            .RuleFor(x => x.DismissalDate, (f, employeeObject) =>
+                        employeeObject.Dismissal
+                        ? f.Date.BetweenDateOnly(employeeObject.AdmissionDate, DateOnly.FromDateTime(DateTime.UtcNow))
+                        : null
+            );
 
-        _logger.LogInformation("Finally generate employee with ID: {Id}", id);
+        logger.LogInformation("Finally generate employee with ID: {Id}", id);
 
-        return faker.Generate();
+        return _faker.Generate();
     }
 
     private static string GenerateEmployeeFullName(Faker faker)
     {
-        var gender = faker.PickRandom(Enum.GetValues(typeof(Name.Gender)).Cast<Name.Gender>().ToArray());
-
+        var gender = faker.Person.Gender;
         var firstName = faker.Name.FirstName(gender);
         var lastName = faker.Name.LastName(gender);
         var patronymic = faker.Name.FirstName(gender) + (gender == Name.Gender.Male ? "еевич" : "еевна");
@@ -85,33 +97,12 @@ public class CompanyEmployeeGenerator(ILogger<CompanyEmployeeGenerator> logger)
         return string.Join(' ', firstName, lastName, patronymic);
     }
 
-    private static string GenerateEmployeePosition(Faker faker)
+    private static decimal GenerateEmployeeSalary(Faker faker, CompanyEmployeeModel employeeObject)
     {
-        return string.Join(' ', faker.PickRandom(_positionProfessions), faker.PickRandom<PositionSuffix>());
-    }
+        var baseSalary = faker.Random.Decimal(_salaryMin, _salaryMax);
+        var salaryMap = _positionSuffixSalaryMultipliers
+            .FirstOrDefault(pair => employeeObject.Position.Contains(pair.Key.ToString()), new KeyValuePair<PositionSuffix, decimal>(PositionSuffix.Junior, 1m));
 
-    private static decimal GenerateEmployeeSalary(Faker faker, CompanyEmployeeModel x)
-    {
-        var baseSalary = faker.Random.Decimal(100, 200);
-        var finalSalary = baseSalary;
-
-        foreach (var kvp in _positionSuffixSalaryMultipliers)
-        {
-            if (x.Position.Contains(kvp.Key.ToString()))
-            {
-                finalSalary = baseSalary * kvp.Value;
-                break;
-            }
-        }
-
-        return Math.Round(baseSalary, 2);
-    }
-
-    private static DateOnly? GenerateEmployeeDismissalDate(Faker faker, CompanyEmployeeModel x)
-    {
-
-        if (x.Dismissal) return null;
-
-        return faker.Date.BetweenDateOnly(x.AdmissionDate, DateOnly.FromDateTime(DateTime.UtcNow));
+        return Math.Round(baseSalary * salaryMap.Value, 2);
     }
 }

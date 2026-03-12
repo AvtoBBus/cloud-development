@@ -15,14 +15,11 @@ namespace CompanyEmployees.Generator.Services;
 public class CompanyEmployeeService(
     CompanyEmployeeGenerator generator,
     IDistributedCache cache,
-    ILogger<CompanyEmployeeService> logger
+    ILogger<CompanyEmployeeService> logger,
+    IConfiguration config
 )
 {
-    private readonly CompanyEmployeeGenerator _generator = generator;
-    private readonly IDistributedCache _cache = cache;
-    private readonly ILogger<CompanyEmployeeService> _logger = logger;
-
-    private static readonly TimeSpan _cacheExpiration = TimeSpan.FromMinutes(5);
+    private readonly TimeSpan _cacheExpiration = TimeSpan.FromMinutes(int.Parse(config["CacheSetting:CacheExpirationMinutes"] ?? "5"));
     private const string CacheKeyPrefix = "company-employee:";
 
     /// <summary>
@@ -35,20 +32,20 @@ public class CompanyEmployeeService(
     {
         var cacheKey = $"{CacheKeyPrefix}{id}";
 
-        _logger.LogInformation("Request for credit application with ID: {Id}", id);
+        logger.LogInformation("Request for company employee application with ID: {Id}", id);
 
-        var cachedData = await _cache.GetStringAsync(cacheKey, cancellationToken);
+        var cachedData = await cache.GetStringAsync(cacheKey, cancellationToken);
 
         if (!string.IsNullOrEmpty(cachedData))
         {
-            _logger.LogInformation("Credit application {Id} found in cache", id);
+            logger.LogInformation("Company employee application {Id} found in cache", id);
             var cachedApplication = JsonSerializer.Deserialize<CompanyEmployeeModel>(cachedData);
-            return cachedApplication!;
+            if (cachedApplication != null) return cachedApplication;
         }
 
-        _logger.LogInformation("Credit application {Id} not found in cache, generating new one", id);
+        logger.LogInformation("Company employee application {Id} not found in cache, generating new one", id);
 
-        var application = _generator.Generate(id);
+        var application = generator.Generate(id);
 
         var serializedData = JsonSerializer.Serialize(application);
         var cacheOptions = new DistributedCacheEntryOptions
@@ -56,10 +53,10 @@ public class CompanyEmployeeService(
             AbsoluteExpirationRelativeToNow = _cacheExpiration
         };
 
-        await _cache.SetStringAsync(cacheKey, serializedData, cacheOptions, cancellationToken);
+        await cache.SetStringAsync(cacheKey, serializedData, cacheOptions, cancellationToken);
 
-        _logger.LogInformation(
-            "Credit application {Id} saved to cache with TTL {CacheExpiration} minutes",
+        logger.LogInformation(
+            "Company employee application {Id} saved to cache with TTL {CacheExpiration} minutes",
             id,
             _cacheExpiration.TotalMinutes);
 
