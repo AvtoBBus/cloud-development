@@ -19,7 +19,7 @@ public class CompanyEmployeeService(
     IConfiguration config
 )
 {
-    private readonly TimeSpan _cacheExpiration = TimeSpan.FromMinutes(int.Parse(config["CacheSetting:CacheExpirationMinutes"] ?? "5"));
+    private readonly TimeSpan _cacheExpiration = TimeSpan.FromMinutes(config.GetSection("CacheSetting").GetValue("CacheExpirationMinutes", 5));
     private const string CacheKeyPrefix = "company-employee:";
 
     /// <summary>

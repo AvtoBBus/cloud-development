@@ -23,17 +23,30 @@ public class CompanyEmployeeGenerator(ILogger<CompanyEmployeeGenerator> logger)
         "System Architect"
     ];
 
-    private readonly Faker<CompanyEmployeeModel> _faker = new("ru");
+    private readonly Faker<CompanyEmployeeModel> _faker = new Faker<CompanyEmployeeModel>("ru")
+            .RuleFor(x => x.FullName, GenerateEmployeeFullName)
+            .RuleFor(x => x.Position, f => $"{f.PickRandom(_positionProfessions)} {f.PickRandom<PositionSuffix>()}")
+            .RuleFor(x => x.Section, f => f.Commerce.Department())
+            .RuleFor(x => x.AdmissionDate, f => f.Date.PastDateOnly(10))
+            .RuleFor(x => x.Salary, GenerateEmployeeSalary)
+            .RuleFor(x => x.Email, f => f.Internet.Email())
+            .RuleFor(x => x.PhoneNumber, f => f.Phone.PhoneNumber("+7(###)###-##-##"))
+            .RuleFor(x => x.Dismissal, f => f.Random.Bool())
+            .RuleFor(x => x.DismissalDate, (f, employeeObject) =>
+                        employeeObject.Dismissal
+                        ? f.Date.BetweenDateOnly(employeeObject.AdmissionDate, DateOnly.FromDateTime(DateTime.UtcNow))
+                        : null
+            );
 
     /// <summary>
     /// Минимальное значение оклада
     /// </summary>
-    private static readonly decimal _salaryMin = 100;
+    private const decimal SalaryMin = 100;
 
     /// <summary>
     /// Максимальное значение оклада
     /// </summary>
-    private static readonly decimal _salaryMax = 200;
+    private const decimal SalaryMax = 200;
 
     /// <summary>
     /// Справочник суффиксов для профессий
@@ -65,26 +78,7 @@ public class CompanyEmployeeGenerator(ILogger<CompanyEmployeeGenerator> logger)
     public CompanyEmployeeModel Generate(int id)
     {
         logger.LogInformation("Start generating company employee application with ID: {Id}", id);
-
-        _faker.UseSeed(id)
-            .RuleFor(x => x.Id, _ => id)
-            .RuleFor(x => x.FullName, GenerateEmployeeFullName)
-            .RuleFor(x => x.Position, f => $"{f.PickRandom(_positionProfessions)} {f.PickRandom<PositionSuffix>()}")
-            .RuleFor(x => x.Section, f => f.Commerce.Department())
-            .RuleFor(x => x.AdmissionDate, f => f.Date.PastDateOnly(10))
-            .RuleFor(x => x.Salary, GenerateEmployeeSalary)
-            .RuleFor(x => x.Email, f => f.Internet.Email())
-            .RuleFor(x => x.PhoneNumber, f => f.Phone.PhoneNumber("+7(###)###-##-##"))
-            .RuleFor(x => x.Dismissal, f => f.Random.Bool())
-            .RuleFor(x => x.DismissalDate, (f, employeeObject) =>
-                        employeeObject.Dismissal
-                        ? f.Date.BetweenDateOnly(employeeObject.AdmissionDate, DateOnly.FromDateTime(DateTime.UtcNow))
-                        : null
-            );
-
-        logger.LogInformation("Finally generate employee with ID: {Id}", id);
-
-        return _faker.Generate();
+        return _faker.UseSeed(id).RuleFor(x => x.Id, _ => id).Generate();
     }
 
     private static string GenerateEmployeeFullName(Faker faker)
@@ -92,14 +86,14 @@ public class CompanyEmployeeGenerator(ILogger<CompanyEmployeeGenerator> logger)
         var gender = faker.Person.Gender;
         var firstName = faker.Name.FirstName(gender);
         var lastName = faker.Name.LastName(gender);
-        var patronymic = faker.Name.FirstName(gender) + (gender == Name.Gender.Male ? "еевич" : "еевна");
+        var patronymic = faker.Name.FirstName(Name.Gender.Male) + (gender == Name.Gender.Male ? "еевич" : "еевна");
 
         return string.Join(' ', firstName, lastName, patronymic);
     }
 
     private static decimal GenerateEmployeeSalary(Faker faker, CompanyEmployeeModel employeeObject)
     {
-        var baseSalary = faker.Random.Decimal(_salaryMin, _salaryMax);
+        var baseSalary = faker.Random.Decimal(SalaryMin, SalaryMax);
         var salaryMap = _positionSuffixSalaryMultipliers
             .FirstOrDefault(pair => employeeObject.Position.Contains(pair.Key.ToString()), new KeyValuePair<PositionSuffix, decimal>(PositionSuffix.Junior, 1m));
 
