@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CompanyEmployees.Generator"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CompanyEmployees.ServiceDefaults", "CompanyEmployees.ServiceDefaults\CompanyEmployees.ServiceDefaults.csproj", "{53C4EDF4-E3C2-A484-171F-78A5FD7190F6}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CompanyEmployees.ApiGateway", "CompanyEmployees.ApiGateway\CompanyEmployees.ApiGateway.csproj", "{A1370E88-073B-C8F9-1C33-D962F1D383BD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		123|Any CPU = 123|Any CPU
@@ -42,6 +44,12 @@ Global
 		{53C4EDF4-E3C2-A484-171F-78A5FD7190F6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{53C4EDF4-E3C2-A484-171F-78A5FD7190F6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{53C4EDF4-E3C2-A484-171F-78A5FD7190F6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1370E88-073B-C8F9-1C33-D962F1D383BD}.123|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1370E88-073B-C8F9-1C33-D962F1D383BD}.123|Any CPU.Build.0 = Debug|Any CPU
+		{A1370E88-073B-C8F9-1C33-D962F1D383BD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1370E88-073B-C8F9-1C33-D962F1D383BD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1370E88-073B-C8F9-1C33-D962F1D383BD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1370E88-073B-C8F9-1C33-D962F1D383BD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
