@@ -41,7 +41,7 @@ public class QueryBased(IServiceDiscoveryProvider serviceDiscovery)
         return new OkResponse<ServiceHostAndPort>(services[id % services.Count].HostAndPort);
     }
 
-    private OkResponse<ServiceHostAndPort> SelectRandomService(List<Service> currentServices)
+    private static OkResponse<ServiceHostAndPort> SelectRandomService(List<Service> currentServices)
     {
         var randomIndex = Random.Shared.Next(currentServices.Count);
         return new OkResponse<ServiceHostAndPort>(currentServices[randomIndex].HostAndPort);

@@ -1,4 +1,5 @@
 {
+  "Generators": [ "generator-1", "generator-2", "generator-3" ],
   "Routes": [
     {
       "DownstreamPathTemplate": "/employee",
