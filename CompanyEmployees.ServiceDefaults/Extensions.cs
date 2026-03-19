@@ -103,16 +103,6 @@ public static class Extensions
         return builder;
     }
 
-    public static IHostApplicationBuilder AddGatewayDefaults(this IHostApplicationBuilder builder)
-    {
-        builder.ConfigureSerilog();
-        builder.ConfigureOpenTelemetry();
-        builder.AddDefaultHealthChecks();
-        builder.AddDefaultCors();
-
-        return builder;
-    }
-
     public const string CorsPolicyName = "GatewayPolicy";
 
     public static IHostApplicationBuilder AddDefaultCors(this IHostApplicationBuilder builder)

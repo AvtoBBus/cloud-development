@@ -1,8 +1,6 @@
 using CompanyEmployees.ApiGateway.LoadBalancer;
-using Grpc.Net.Client.Balancer;
 using Ocelot.DependencyInjection;
 using Ocelot.Middleware;
-using System.Runtime.InteropServices;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,8 +30,6 @@ builder.Services
     .AddOcelot(builder.Configuration)
     .AddCustomLoadBalancer((route, serviceDiscovery) =>
         new QueryBased(serviceDiscovery));
-
-Console.WriteLine(builder.Configuration);
 
 var app = builder.Build();
 

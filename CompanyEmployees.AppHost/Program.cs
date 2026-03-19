@@ -4,7 +4,9 @@ var redis = builder.AddRedis("redis")
     .WithRedisCommander();
 
 var gatewayPort = builder.Configuration.GetValue<int>("GatewayPort");
-var gateway = builder.AddProject<Projects.CompanyEmployees_ApiGateway>("companyemployees-apigateway");
+var gateway = builder
+    .AddProject<Projects.CompanyEmployees_ApiGateway>("companyemployees-apigateway")
+    .WithExternalHttpEndpoints();
 
 for (var i = 0; i < 3; ++i)
 {
@@ -15,7 +17,6 @@ for (var i = 0; i < 3; ++i)
 
     gateway
         .WithReference(currGenerator)
-        .WithExternalHttpEndpoints()
         .WaitFor(currGenerator);
 }
 
