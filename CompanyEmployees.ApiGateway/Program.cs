@@ -1,8 +1,11 @@
 using CompanyEmployees.ApiGateway.LoadBalancer;
+using CompanyEmployees.ServiceDefaults;
 using Ocelot.DependencyInjection;
 using Ocelot.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.AddServiceDefaults();
 
 builder.Configuration
     .AddJsonFile("ocelot.json", optional: false, reloadOnChange: true);
@@ -33,5 +36,8 @@ builder.Services
 
 var app = builder.Build();
 
+app.MapDefaultEndpoints();
+
 await app.UseOcelot();
-await app.RunAsync();
+
+app.Run();
