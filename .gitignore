@@ -418,3 +418,6 @@ FodyWeavers.xsd
 *.msp
 
 /minio-data
+/CompanyEmployees.AppHost/minio-data/.minio.sys/tmp/808628fb-0b20-4cea-9ca9-1b28fea8d489
+/CompanyEmployees.AppHost/minio-data/.minio.sys/tmp/05678231-c811-49c5-9e05-55188d7b2e92
+/CompanyEmployees.AppHost/minio-data/.minio.sys/tmp
