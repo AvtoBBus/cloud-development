@@ -4,6 +4,7 @@ using Amazon.S3.Model;
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Testing;
+using MassTransit;
 using Xunit;
 
 namespace CompanyEmployees.Tests;
@@ -16,7 +17,7 @@ public class Fixture : IAsyncLifetime
     public DistributedApplication App { get; private set; } = null!;
     public AmazonS3Client S3Client { get; private set; } = null!;
     
-    public string sqsUrl = "";
+    public string SqsUrl { get; private set; } = "";
 
     public async Task InitializeAsync()
     {
@@ -35,28 +36,38 @@ public class Fixture : IAsyncLifetime
         App = await appHost.BuildAsync();
         await App.StartAsync();
 
-        await Task.WhenAll(
-            App.ResourceNotifications.WaitForResourceAsync("minio"),
-            App.ResourceNotifications.WaitForResourceAsync("elasticmq"),
-            App.ResourceNotifications.WaitForResourceAsync("companyemployees-apigateway"),
-            App.ResourceNotifications.WaitForResourceAsync("company-employee-fileservice")
-        ).WaitAsync(TimeSpan.FromMinutes(5));
+        try
+        {
+            await Task.WhenAll(
+                App.ResourceNotifications.WaitForResourceAsync("minio"),
+                App.ResourceNotifications.WaitForResourceAsync("elasticmq"),
+                App.ResourceNotifications.WaitForResourceAsync("companyemployees-apigateway"),
+                App.ResourceNotifications.WaitForResourceAsync("company-employee-fileservice"),
+                App.ResourceNotifications.WaitForResourceAsync("redis"),
+                App.ResourceNotifications.WaitForResourceAsync("generator-1"),
+                App.ResourceNotifications.WaitForResourceAsync("generator-2"),
+                App.ResourceNotifications.WaitForResourceAsync("generator-3")
+            ).WaitAsync(TimeSpan.FromMinutes(5));
+        }
+        catch (Exception ex) {
+            Console.WriteLine("\n\n\n");
+            Console.WriteLine(ex.Message);
+            Console.WriteLine("\n\n\n");
+        }
 
         await Task.Delay(TimeSpan.FromSeconds(5));
 
-        using var minioClient = App.CreateHttpClient("minio", "http");
-        var minioUrl = minioClient.BaseAddress!.ToString().TrimEnd('/');
+        var minioUrl = App.GetEndpoint("minio", "http");
 
 
-        var sqsHttpClient = App.CreateHttpClient("elasticmq", "http");
-        sqsUrl = sqsHttpClient.BaseAddress?.ToString().TrimEnd('/');
+        SqsUrl = App.GetEndpoint("elasticmq", "http").ToString();
 
 
         S3Client = new AmazonS3Client(
             new BasicAWSCredentials("minioadmin", "minioadmin"),
             new AmazonS3Config
             {
-                ServiceURL = minioUrl,
+                ServiceURL = minioUrl.ToString(),
                 ForcePathStyle = true,
                 UseHttp = true,
                 AuthenticationRegion = "us-east-1"

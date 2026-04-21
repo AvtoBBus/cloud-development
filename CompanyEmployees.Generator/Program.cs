@@ -3,7 +3,7 @@ using CompanyEmployees.ServiceDefaults;
 using Serilog;
 using MassTransit;
 using Amazon.SQS;
-using LocalStack.Client.Extensions;
+using MassTransit.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,23 +27,24 @@ builder.Services.AddCors(options =>
 var sqsServiceUrl = builder.Configuration["Sqs:ServiceUrl"];
 if (!string.IsNullOrEmpty(sqsServiceUrl))
 {
-    builder.Services.AddMassTransit(x =>
-    {
-        x.UsingAmazonSqs((_, cfg) =>
-        {
-            cfg.Host("us-east-1", h =>
-            {
-                h.AccessKey("test");
-                h.SecretKey("test");
-                h.Config(new AmazonSQSConfig
-                {
-                    ServiceURL = sqsServiceUrl,
-                    AuthenticationRegion = "us-east-1"
-                });
-            });
-            cfg.UseRawJsonSerializer(RawSerializerOptions.AnyMessageType);
-        });
-    });
+    //builder.Services.AddMassTransit(x =>
+    //{
+    //    x.UsingAmazonSqs((_, cfg) =>
+    //    {
+
+    //        cfg.Host("us-east-1", h =>
+    //        {
+    //            h.AccessKey("test");
+    //            h.SecretKey("test");
+    //            h.Config(new AmazonSQSConfig
+    //            {
+    //                ServiceURL = sqsServiceUrl,
+    //                AuthenticationRegion = "us-east-1"
+    //            });
+    //        });
+    //        cfg.UseRawJsonSerializer((RawJsonSerializerOptions)RawSerializerOptions.AnyMessageType);
+    //    });
+    //});
 
     builder.Services.AddScoped<IEmployeePublisher, EmployeePublisher>();
 }
@@ -52,8 +53,6 @@ var app = builder.Build();
 
 app.UseCors();
 app.UseSerilogRequestLogging();
-
-app.MapDefaultEndpoints();
 
 app.MapGet("/employee", async (
     int id,

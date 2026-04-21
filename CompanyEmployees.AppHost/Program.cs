@@ -1,3 +1,5 @@
+using Aspire.Hosting;
+
 var builder = DistributedApplication.CreateBuilder(args);
 
 var redis = builder.AddRedis("redis")
@@ -9,11 +11,7 @@ var minioSecretKey = builder.Configuration["MinIO:SecretKey"]!;
 var minio = builder.AddMinioContainer("minio")
     .WithEnvironment("MINIO_ROOT_USER", minioAccessKey)
     .WithEnvironment("MINIO_ROOT_PASSWORD", minioSecretKey)
-    //.WithBindMount("minio-data", "/data")
     .WaitFor(redis);
-
-minio.WithEndpoint("http", endpoint => endpoint.Port = 9000);
-minio.WithEndpoint("console", endpoint => endpoint.Port = 9001);
 
 var sqs = builder.AddContainer("elasticmq", "softwaremill/elasticmq-native")
     .WithHttpEndpoint(targetPort: 9324, name: "http")
@@ -41,6 +39,7 @@ for (var i = 0; i < 3; ++i)
 var fileService = builder.AddProject<Projects.CompanyEmployees_FileService>("company-employee-fileservice")
     .WithEnvironment("Sqs__ServiceUrl", sqs.GetEndpoint("http"))
     .WithEnvironment("MinIO__BucketName", "company-employee")
+    .WithEnvironment("MinIO__Endpoint", minio.GetEndpoint("http"))
     .WithEnvironment("BucketName", "company-employee")
     .WithReference(minio)
     .WaitFor(sqs)
