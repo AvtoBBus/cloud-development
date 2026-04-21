@@ -1,14 +1,12 @@
 ﻿using Amazon.S3;
 using Amazon.S3.Model;
-using CompanyEmployees.FileService.Configuration;
-using Microsoft.Extensions.Options;
 
 namespace CompanyEmployees.FileService.Services;
 
-public class MinioInitializer(IAmazonS3 s3Client, ILogger<MinioInitializer> logger, IOptions<MinioConfiguration> configuration) : BackgroundService
+public class MinioInitializer(IAmazonS3 s3Client, ILogger<MinioInitializer> logger, IConfiguration configuration) : BackgroundService
 {
 
-    private MinioConfiguration _configuration = configuration.Value;
+    private readonly string _bucketName = configuration["MinIO:BucketName"] ?? "company-employee";
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -16,13 +14,13 @@ public class MinioInitializer(IAmazonS3 s3Client, ILogger<MinioInitializer> logg
         {
             try
             {
-                await s3Client.PutBucketAsync(new PutBucketRequest { BucketName = _configuration.BucketName }, stoppingToken);
-                logger.LogInformation("Minio bucket '{BucketName}' ready", _configuration.BucketName);
+                await s3Client.PutBucketAsync(new PutBucketRequest { BucketName = _bucketName }, stoppingToken);
+                logger.LogInformation("Minio bucket '{BucketName}' ready", _bucketName);
                 return;
             }
             catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.Conflict)
             {
-                logger.LogInformation("Minio bucket '{BucketName}' already exists", _configuration.BucketName);
+                logger.LogInformation("Minio bucket '{BucketName}' already exists", _bucketName);
                 return;
             }
             catch (Exception ex) when (!stoppingToken.IsCancellationRequested)

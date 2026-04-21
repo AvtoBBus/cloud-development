@@ -128,6 +128,92 @@ public class IntegrationTests(Fixture fixture) : IClassFixture<Fixture>
         Assert.NotEmpty(objects);
     }
 
+    [Fact]
+    public async Task Debug_MinioConnection()
+    {
+        // Проверяем, видит ли FileService тот же MinIO
+        using var client = fixture.App.CreateHttpClient("company-employee-fileservice", "http");
+
+        // Добавьте эндпоинт в FileService для диагностики
+        var response = await client.GetAsync("/health");
+
+        // Также проверяем через S3 клиент
+        var buckets = await fixture.S3Client.ListBucketsAsync();
+        Console.WriteLine($"Found {buckets.Buckets.Count} buckets:");
+        foreach (var bucket in buckets.Buckets)
+        {
+            Console.WriteLine($"- {bucket.BucketName}");
+        }
+
+        // Проверяем, может ли FileService писать в MinIO
+        var testKey = "test.txt";
+        await fixture.S3Client.PutObjectAsync(new PutObjectRequest
+        {
+            BucketName = "company-employee",
+            Key = testKey,
+            ContentBody = "test"
+        });
+
+        var objects = await fixture.S3Client.ListObjectsV2Async(new ListObjectsV2Request
+        {
+            BucketName = "company-employee"
+        });
+
+        Assert.True(objects.S3Objects.Count > 0, "No objects found in bucket");
+        Console.WriteLine($"Successfully wrote to MinIO, found {objects.S3Objects.Count} objects");
+    }
+
+    [Fact]
+    public async Task Debug_SqsQueue()
+    {
+        // Создаем SQS клиент
+        var sqsConfig = new AmazonSQSConfig
+        {
+            ServiceURL = fixture.sqsUrl,
+            AuthenticationRegion = "us-east-1"
+        };
+        using var sqsClient = new AmazonSQSClient(
+            new BasicAWSCredentials("test", "test"),
+            sqsConfig);
+
+        // Получаем URL очереди
+        try
+        {
+            var getQueueUrlResponse = await sqsClient.GetQueueUrlAsync("employees");
+            Console.WriteLine($"✅ Queue URL: {getQueueUrlResponse.QueueUrl}");
+
+            // Проверяем атрибуты очереди
+            var attributes = await sqsClient.GetQueueAttributesAsync(
+                getQueueUrlResponse.QueueUrl,
+                new List<string> { "ApproximateNumberOfMessages", "QueueArn" });
+
+            Console.WriteLine($"Queue ARN: {attributes.QueueARN}");
+            Console.WriteLine($"Messages in queue: {attributes.ApproximateNumberOfMessages}");
+
+            // Отправляем тестовое сообщение напрямую в SQS
+            var testMessage = new { Id = 999, FullName = "Test User", Position = "Tester" };
+            var sendResponse = await sqsClient.SendMessageAsync(new SendMessageRequest
+            {
+                QueueUrl = getQueueUrlResponse.QueueUrl,
+                MessageBody = JsonSerializer.Serialize(testMessage)
+            });
+
+            Console.WriteLine($"✅ Test message sent, MD5: {sendResponse.MD5OfMessageBody}");
+
+            // Ждем и проверяем, что сообщение появилось
+            await Task.Delay(2000);
+
+            var attributesAfter = await sqsClient.GetQueueAttributesAsync(
+                getQueueUrlResponse.QueueUrl,
+                new List<string> { "ApproximateNumberOfMessages" });
+            Console.WriteLine($"Messages after send: {attributesAfter.ApproximateNumberOfMessages}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error: {ex.Message}");
+        }
+    }
+
     /// <summary>
     /// Тест для проверки данных сохранённых в бакете
     /// </summary>
@@ -140,6 +226,8 @@ public class IntegrationTests(Fixture fixture) : IClassFixture<Fixture>
         using var client = fixture.App.CreateHttpClient("companyemployees-apigateway", "http");
         var employee = await client.GetFromJsonAsync<CompanyEmployeeModel>($"/employee?id={id}", _jsonOptions);
         Assert.NotNull(employee);
+
+        await Task.Delay(TimeSpan.FromSeconds(10));
 
         var response = await fixture.S3Client.ListObjectsV2Async(new ListObjectsV2Request
         {
