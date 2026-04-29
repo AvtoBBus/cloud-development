@@ -5,6 +5,7 @@ using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Testing;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace CompanyEmployees.Tests;
 
@@ -13,6 +14,7 @@ namespace CompanyEmployees.Tests;
 /// </summary>
 public class Fixture : IAsyncLifetime
 {
+
     public DistributedApplication App { get; private set; } = null!;
     public AmazonS3Client S3Client { get; private set; } = null!;
     
@@ -20,20 +22,26 @@ public class Fixture : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.CompanyEmployees_AppHost>();
+        using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
+
+        var appHost = await DistributedApplicationTestingBuilder
+        .CreateAsync<Projects.CompanyEmployees_AppHost>(
+        [
+            "DcpPublisher:RandomizePorts=false"
+        ]);
 
         appHost.Services.ConfigureHttpClientDefaults(http =>
             http.AddStandardResilienceHandler(options =>
             {
-                options.TotalRequestTimeout.Timeout = TimeSpan.FromMinutes(3);
+                options.TotalRequestTimeout.Timeout = TimeSpan.FromMinutes(1);
                 options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(60);
                 options.CircuitBreaker.SamplingDuration = TimeSpan.FromMinutes(3);
-                options.Retry.MaxRetryAttempts = 10;
-                options.Retry.Delay = TimeSpan.FromSeconds(3);
+                options.Retry.MaxRetryAttempts = 3;
+                options.Retry.Delay = TimeSpan.FromSeconds(1);
             }));
 
         App = await appHost.BuildAsync();
-        await App.StartAsync();
+        await App.StartAsync(cts.Token);
 
         await Task.WhenAll(
             App.ResourceNotifications.WaitForResourceAsync("minio"),
@@ -49,7 +57,7 @@ public class Fixture : IAsyncLifetime
 
 
         var sqsHttpClient = App.CreateHttpClient("elasticmq", "http");
-        sqsUrl = sqsHttpClient.BaseAddress?.ToString().TrimEnd('/');
+        sqsUrl = sqsHttpClient.BaseAddress!.ToString().TrimEnd('/');
 
 
         S3Client = new AmazonS3Client(
@@ -71,7 +79,6 @@ public class Fixture : IAsyncLifetime
                 BucketName = "company-employee"
             });
         }
-
     }
 
     public async Task<List<S3Object>> WaitForS3ObjectAsync(string key, int maxAttempts = 15)
@@ -111,11 +118,10 @@ public class Fixture : IAsyncLifetime
     {
         S3Client?.Dispose();
 
-        try
+        if (App is not null)
         {
-            await App.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30));
+            await App.StopAsync().WaitAsync(TimeSpan.FromSeconds(10));
+            await App.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10));
         }
-        catch (TimeoutException) { }
-        catch (OperationCanceledException) { }
     }
 }
